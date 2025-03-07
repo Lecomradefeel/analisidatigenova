@@ -27,8 +27,10 @@ df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
 
 # Calcolare la percentuale di voti rispetto agli iscritti
 df_merged["PERC_VOTI"] = (df_merged["TOT_VOTI_VALIDI_LISTA"] / df_merged["ISCRITTI_TOT"]) * 100
-# Rimuovere eventuali valori NaN nella colonna PERC_VOTI
-df_merged["PERC_VOTI"] = df_merged["PERC_VOTI"].fillna(0)
+
+# Pulizia dei dati: rimuovere NaN, forzare numerico e filtrare valori tra 0 e 100
+df_merged["PERC_VOTI"] = pd.to_numeric(df_merged["PERC_VOTI"], errors="coerce").fillna(0)
+df_merged = df_merged[(df_merged["PERC_VOTI"] >= 0) & (df_merged["PERC_VOTI"] <= 100)]
 
 # Creare la mappa centrata su Genova
 mappa = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
@@ -59,3 +61,4 @@ for _, row in df_merged.iterrows():
 mappa.save("mappa_sezioni_voti_accorpati.html")
 
 print("Mappa generata e salvata come 'mappa_sezioni_voti_accorpati.html'")
+
