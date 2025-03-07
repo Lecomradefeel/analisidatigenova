@@ -6,7 +6,7 @@ from streamlit_folium import folium_static
 from folium.plugins import MarkerCluster
 
 # Titolo della pagina Streamlit
-st.title("Mappa delle Sezioni Elettorali con Percentuale di Voti")
+st.title("Mappa delle Sezioni Elettorali")
 
 # Percorso del file Shapefile (se disponibile)
 shapefile_path = "precincts_genova_original.shp"
@@ -33,32 +33,55 @@ df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
 # Calcolare la percentuale di voti rispetto agli iscritti
 df_merged["PERC_VOTI"] = (df_merged["TOT_VOTI_VALIDI_LISTA"] / df_merged["ISCRITTI_TOT"]) * 100
 
+# Calcolare la percentuale di voti per lista
+liste_partiti = [col for col in df_voti.columns if col not in ["SEZIONE", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA"]]
+for lista in liste_partiti:
+    df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI_LISTA"]) * 100
+
 # Pulizia dei dati: rimuovere NaN, forzare numerico e filtrare valori tra 0 e 100
-df_merged["PERC_VOTI"] = pd.to_numeric(df_merged["PERC_VOTI"], errors="coerce").fillna(0)
-df_merged = df_merged[(df_merged["PERC_VOTI"] >= 0) & (df_merged["PERC_VOTI"] <= 100)]
+df_merged = df_merged.fillna(0)
+
+# Opzioni di visualizzazione
+view_option = st.radio("Seleziona la vista della mappa:", ["Percentuale votanti", "Distribuzione per lista"])
 
 # Creare la mappa centrata su Genova
 mappa = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
 
-# Aggiungere le sezioni alla mappa
-choropleth = folium.Choropleth(
-    geo_data=gdf,
-    name="Sezioni elettorali",
-    data=df_merged,
-    columns=["SEZIONE", "PERC_VOTI"],
-    key_on="feature.properties.SEZIONE",
-    fill_color="YlOrRd",
-    fill_opacity=0.7,
-    line_opacity=0.2,
-    legend_name="Percentuale voti espressi"
-).add_to(mappa)
+if view_option == "Percentuale votanti":
+    choropleth = folium.Choropleth(
+        geo_data=gdf,
+        name="Sezioni elettorali",
+        data=df_merged,
+        columns=["SEZIONE", "PERC_VOTI"],
+        key_on="feature.properties.SEZIONE",
+        fill_color="YlOrRd",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name="Percentuale voti espressi"
+    ).add_to(mappa)
+
+else:
+    selected_lista = st.selectbox("Seleziona la lista/partito da visualizzare:", liste_partiti)
+    choropleth = folium.Choropleth(
+        geo_data=gdf,
+        name="Distribuzione per lista",
+        data=df_merged,
+        columns=["SEZIONE", f"PERC_{selected_lista}"],
+        key_on="feature.properties.SEZIONE",
+        fill_color="Blues",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name=f"Percentuale voti per {selected_lista}"
+    ).add_to(mappa)
 
 # Aggiungere popup con info per ogni sezione
 for _, row in df_merged.iterrows():
     folium.GeoJson(
         row["geometry"],
         tooltip=folium.Tooltip(
-            f"Sezione: {row['SEZIONE']}<br>Percentuale voti: {row['PERC_VOTI']:.2f}%"
+            f"Sezione: {row['SEZIONE']}<br>"
+            f"Percentuale voti espressi: {row['PERC_VOTI']:.2f}%<br>"
+            f"{selected_lista if view_option == 'Distribuzione per lista' else ''}: {row[f'PERC_{selected_lista}']:.2f}%"
         ),
     ).add_to(mappa)
 
@@ -66,5 +89,4 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
-
 
