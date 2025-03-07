@@ -31,11 +31,16 @@ gdf["SEZIONE"] = gdf["SEZIONE"].astype(int)
 # Unire i dati geografici con i dati di voto
 df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
 
+# Convertire tutte le colonne di voto in numerico
+df_merged[df_voti.columns[1:]] = df_merged[df_voti.columns[1:]].apply(pd.to_numeric, errors="coerce").fillna(0)
+
 # Calcolare la percentuale di voti rispetto agli iscritti
 df_merged["PERC_VOTI"] = (df_merged["TOT_VOTI_VALIDI_LISTA"] / df_merged["ISCRITTI_TOT"]) * 100
 
 # Calcolare la percentuale di voti per lista evitando divisione per zero
 df_merged["TOT_VOTI_VALIDI_LISTA"] = df_merged["TOT_VOTI_VALIDI_LISTA"].replace(0, np.nan)
+
+df_merged["TOT_VOTI_VALIDI_LISTA"].fillna(1, inplace=True)  # Per evitare divisioni per zero
 
 liste_partiti = [col for col in df_voti.columns if col not in ["SEZIONE", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA"]]
 for lista in liste_partiti:
