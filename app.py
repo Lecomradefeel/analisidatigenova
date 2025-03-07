@@ -26,37 +26,36 @@ def load_data():
 
 gdf_sezioni, df_voti, df_statistiche = load_data()
 
-# Accorpare le sezioni per MUNICIPIO
-st.write("### Aggregazione per MUNICIPIO")
-gdf_municipi = gdf_sezioni.dissolve(by="municipio")
+# Accorpare le sezioni per MUNICIPIO usando il nome corretto della colonna
+gdf_municipi = gdf_sezioni.dissolve(by="NOME_MUNIC")
 
-gdf_municipi["geometry"] = gdf_sezioni.groupby("municipio")["geometry"].apply(lambda x: unary_union(x))
+gdf_municipi["geometry"] = gdf_sezioni.groupby("NOME_MUNIC")["geometry"].apply(lambda x: unary_union(x))
 
 # Unire i dati di voto e le statistiche
 st.write("### Unione con i dati di voto e statistiche")
-df_voti["municipio"] = df_voti["MUNICIPIO"].str.lower()
-df_statistiche["municipio"] = df_statistiche["MUNICIPIO"].str.lower()
-gdf_municipi = gdf_municipi.merge(df_voti, left_on="municipio", right_on="municipio", how="left")
-gdf_municipi = gdf_municipi.merge(df_statistiche, left_on="municipio", right_on="municipio", how="left")
+df_voti["NOME_MUNIC"] = df_voti["MUNICIPIO"].str.lower()
+df_statistiche["NOME_MUNIC"] = df_statistiche["MUNICIPIO"].str.lower()
+gdf_municipi = gdf_municipi.merge(df_voti, left_on="NOME_MUNIC", right_on="NOME_MUNIC", how="left")
+gdf_municipi = gdf_municipi.merge(df_statistiche, left_on="NOME_MUNIC", right_on="NOME_MUNIC", how="left")
 
 # Creare una mappa interattiva con filtri
 def create_map(selected_municipio):
     m = folium.Map(location=[44.4073, 8.9339], zoom_start=12)
     
-    filtered_data = gdf_municipi if selected_municipio == "Tutti" else gdf_municipi[gdf_municipi["municipio"] == selected_municipio]
+    filtered_data = gdf_municipi if selected_municipio == "Tutti" else gdf_municipi[gdf_municipi["NOME_MUNIC"] == selected_municipio]
     
     for _, row in filtered_data.iterrows():
         folium.GeoJson(
             row["geometry"],
-            name=row["municipio"],
-            tooltip=f"{row['municipio'].capitalize()}\nVoti AVS: {row['AVS - Lista Sansa - Possibile']}\nPercentuale: {row['AVS_ratio']:.2%}\nEtà Media: {row['Età Media']}\nNati: {row['Nati']}"
+            name=row["NOME_MUNIC"],
+            tooltip=f"{row['NOME_MUNIC'].capitalize()}\nVoti AVS: {row['AVS - Lista Sansa - Possibile']}\nPercentuale: {row['AVS_ratio']:.2%}\nEtà Media: {row['Età Media']}\nNati: {row['Nati']}"
         ).add_to(m)
     
     return m
 
 # Aggiungere filtri per municipio e statistiche
 st.write("### Filtri")
-municipi_options = ["Tutti"] + list(gdf_municipi["municipio"].unique())
+municipi_options = ["Tutti"] + list(gdf_municipi["NOME_MUNIC"].unique())
 selected_municipio = st.selectbox("Seleziona un Municipio", municipi_options)
 
 statistiche_options = ["Tutti", "Età Media", "Nati"]
@@ -69,7 +68,7 @@ st_folium(mappa, width=700, height=500)
 # Analisi Statistica
 st.write("### Analisi dei Voti e Dati Demografici")
 fig, ax = plt.subplots()
-filtered_data = gdf_municipi if selected_municipio == "Tutti" else gdf_municipi[gdf_municipi["municipio"] == selected_municipio]
+filtered_data = gdf_municipi if selected_municipio == "Tutti" else gdf_municipi[gdf_municipi["NOME_MUNIC"] == selected_municipio]
 
 if selected_statistica == "Età Media":
     filtered_data.plot(column="Età Media", cmap="Blues", legend=True, ax=ax)
@@ -85,4 +84,5 @@ st.pyplot(fig)
 
 # Tabelle e approfondimenti
 st.write("### Dati per Municipio")
-st.dataframe(filtered_data[["municipio", "AVS - Lista Sansa - Possibile", "TOT_VOTI_VALIDI_LISTA", "AVS_ratio", "Età Media", "Nati"]])
+st.dataframe(filtered_data[["NOME_MUNIC", "AVS - Lista Sansa - Possibile", "TOT_VOTI_VALIDI_LISTA", "AVS_ratio", "Età Media", "Nati"]])
+
