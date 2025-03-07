@@ -25,7 +25,7 @@ df_voti = pd.read_excel(excel_path, sheet_name="Worksheet")
 df_voti["SEZIONE"] = df_voti["SEZIONE"].astype(int)
 gdf["SEZIONE"] = gdf["SEZIONE"].astype(int)
 
-# Accorpare le colonne con nomi simili
+# Accorpare le colonne con nomi simili solo se esistono
 pattern_mapping = {
     "FdI": ["FdI", "FdI.1"],
     "PD": ["PD", "PD.1"],
@@ -35,8 +35,10 @@ pattern_mapping = {
 }
 
 for new_col, patterns in pattern_mapping.items():
-    df_voti[new_col] = df_voti[patterns].sum(axis=1, min_count=1)
-    df_voti.drop(columns=[col for col in patterns if col in df_voti.columns], inplace=True)
+    existing_columns = [col for col in patterns if col in df_voti.columns]
+    if existing_columns:
+        df_voti[new_col] = df_voti[existing_columns].sum(axis=1, min_count=1)
+        df_voti.drop(columns=existing_columns, inplace=True)
 
 # Unire i dati geografici con i dati di voto
 df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
@@ -86,5 +88,6 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
+
 
 
