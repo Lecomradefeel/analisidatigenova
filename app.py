@@ -47,17 +47,19 @@ for new_col, patterns in pattern_mapping.items():
         df_voti[new_col] = df_voti[existing_columns].sum(axis=1, min_count=1)
         df_voti.drop(columns=existing_columns, inplace=True)
 
+# Definire liste_partiti prima dell'unione
+liste_partiti = [col for col in df_voti.columns if col != "SEZIONE"]
+
 # Unire i dati geografici con i dati di voto
 df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
 
 # Convertire tutte le colonne di voto in numerico
-df_merged[df_voti.columns[1:]] = df_merged[df_voti.columns[1:]].apply(pd.to_numeric, errors="coerce").fillna(0)
+df_merged[liste_partiti] = df_merged[liste_partiti].apply(pd.to_numeric, errors="coerce").fillna(0)
 
 # Creare una colonna con il totale effettivo dei voti validi
 df_merged["TOT_VOTI_VALIDI"] = df_merged[liste_partiti].sum(axis=1)
 
 # Calcolare la percentuale di voti per lista rispetto al totale effettivo dei voti validi
-liste_partiti = [col for col in df_voti.columns if col != "SEZIONE"]
 for lista in liste_partiti:
     df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI"]) * 100
 
@@ -82,4 +84,3 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
-
