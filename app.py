@@ -50,6 +50,7 @@ df_merged = df_merged.replace([np.inf, -np.inf], 0).fillna(0)
 
 # Opzioni di visualizzazione
 view_option = st.radio("Seleziona la vista della mappa:", ["Percentuale votanti", "Distribuzione per lista"])
+selected_lista = liste_partiti[0] if liste_partiti else None
 
 # Creare la mappa centrata su Genova
 mappa = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
@@ -83,19 +84,19 @@ else:
 
 # Aggiungere popup con info per ogni sezione
 for _, row in df_merged.iterrows():
+    tooltip_text = f"Sezione: {row['SEZIONE']}<br>Percentuale voti espressi: {row['PERC_VOTI']:.2f}%"
+    
+    if view_option == "Distribuzione per lista" and selected_lista:
+        tooltip_text += f"<br>{selected_lista}: {row[f'PERC_{selected_lista}']:.2f}%"
+    
     folium.GeoJson(
         row["geometry"],
-        tooltip=folium.Tooltip(
-            f"Sezione: {row['SEZIONE']}<br>"
-            f"Percentuale voti espressi: {row['PERC_VOTI']:.2f}%<br>"
-            f"{selected_lista if view_option == 'Distribuzione per lista' else ''}: {row[f'PERC_{selected_lista}']:.2f}%"
-        ),
+        tooltip=folium.Tooltip(tooltip_text),
     ).add_to(mappa)
 
 # Mostrare la mappa in Streamlit
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
-
 
 
