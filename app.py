@@ -31,7 +31,7 @@ df_voti = df_voti.drop(columns=[col for col in colonne_da_escludere if col in df
 
 # Accorpare le colonne con nomi simili solo se esistono
 pattern_mapping = {
-    "Altro": [col for col in df_voti.columns if "Altro" in col],
+    "Altro": [col for col in df_voti.columns if "Altro" in col and "Bucci" not in col and "Orlando" not in col],
     "Altro Bucci": [col for col in df_voti.columns if "Altro Bucci" in col],
     "Altro Orlando": [col for col in df_voti.columns if "Altro Orlando" in col],
     "FdI": [col for col in df_voti.columns if "FdI" in col],
