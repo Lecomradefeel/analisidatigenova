@@ -2,6 +2,7 @@ import folium
 import pandas as pd
 import geopandas as gpd
 import streamlit as st
+import numpy as np
 from streamlit_folium import folium_static
 from folium.plugins import MarkerCluster
 
@@ -33,12 +34,14 @@ df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
 # Calcolare la percentuale di voti rispetto agli iscritti
 df_merged["PERC_VOTI"] = (df_merged["TOT_VOTI_VALIDI_LISTA"] / df_merged["ISCRITTI_TOT"]) * 100
 
-# Calcolare la percentuale di voti per lista
+# Calcolare la percentuale di voti per lista evitando divisione per zero
+df_merged["TOT_VOTI_VALIDI_LISTA"] = df_merged["TOT_VOTI_VALIDI_LISTA"].replace(0, np.nan)
+
 liste_partiti = [col for col in df_voti.columns if col not in ["SEZIONE", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA"]]
 for lista in liste_partiti:
     df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI_LISTA"]) * 100
 
-# Pulizia dei dati: rimuovere NaN, forzare numerico e filtrare valori tra 0 e 100
+# Riempire eventuali valori nulli generati dalla divisione per zero
 df_merged = df_merged.fillna(0)
 
 # Opzioni di visualizzazione
@@ -89,4 +92,5 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
+
 
