@@ -1,7 +1,12 @@
 import folium
 import pandas as pd
 import geopandas as gpd
+import streamlit as st
+from streamlit_folium import folium_static
 from folium.plugins import MarkerCluster
+
+# Titolo della pagina Streamlit
+st.title("Mappa delle Sezioni Elettorali con Percentuale di Voti")
 
 # Percorso del file Shapefile (se disponibile)
 shapefile_path = "precincts_genova_original.shp"
@@ -57,8 +62,9 @@ for _, row in df_merged.iterrows():
         ),
     ).add_to(mappa)
 
-# Salvare la mappa in un file HTML
-mappa.save("mappa_sezioni_voti_accorpati.html")
+# Mostrare la mappa in Streamlit
+folium_static(mappa)
 
-print("Mappa generata e salvata come 'mappa_sezioni_voti_accorpati.html'")
+st.write("Mappa caricata con successo!")
+
 
