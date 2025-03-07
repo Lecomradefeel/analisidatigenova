@@ -39,15 +39,14 @@ df_merged["PERC_VOTI"] = (df_merged["TOT_VOTI_VALIDI_LISTA"] / df_merged["ISCRIT
 
 # Calcolare la percentuale di voti per lista evitando divisione per zero
 df_merged["TOT_VOTI_VALIDI_LISTA"] = df_merged["TOT_VOTI_VALIDI_LISTA"].replace(0, np.nan)
-
-df_merged["TOT_VOTI_VALIDI_LISTA"].fillna(1, inplace=True)  # Per evitare divisioni per zero
+df_merged["TOT_VOTI_VALIDI_LISTA"].fillna(1, inplace=True)
 
 liste_partiti = [col for col in df_voti.columns if col not in ["SEZIONE", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA"]]
 for lista in liste_partiti:
     df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI_LISTA"]) * 100
 
-# Riempire eventuali valori nulli generati dalla divisione per zero
-df_merged = df_merged.fillna(0)
+# Pulizia dati per evitare errori nella mappa
+df_merged = df_merged.replace([np.inf, -np.inf], 0).fillna(0)
 
 # Opzioni di visualizzazione
 view_option = st.radio("Seleziona la vista della mappa:", ["Percentuale votanti", "Distribuzione per lista"])
@@ -97,5 +96,6 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
+
 
 
