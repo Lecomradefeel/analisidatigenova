@@ -25,13 +25,20 @@ df_voti = pd.read_excel(excel_path, sheet_name="Worksheet")
 df_voti["SEZIONE"] = df_voti["SEZIONE"].astype(int)
 gdf["SEZIONE"] = gdf["SEZIONE"].astype(int)
 
+# Rimuovere colonne non necessarie
+colonne_da_escludere = ["UNITA_URBANISTICA", "CIRCOSCRIZIONE", "COD_MUNICIPIO", "MUNICIPIO", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA", "SCH_BIANCHE", "SCH_NULLE", "VOTI_CONTESTATI"]
+df_voti = df_voti.drop(columns=[col for col in colonne_da_escludere if col in df_voti.columns])
+
 # Accorpare le colonne con nomi simili solo se esistono
 pattern_mapping = {
-    "FdI": ["FdI", "FdI.1"],
-    "PD": ["PD", "PD.1"],
-    "M5S": ["M5S", "M5S.1"],
-    "FI": ["FI", "FI.1"],
-    "AVS": ["AVS", "AVS - Lista Sansa - Possibile"]
+    "Altro": [col for col in df_voti.columns if "Altro" in col],
+    "Altro Bucci": [col for col in df_voti.columns if "Altro Bucci" in col],
+    "Altro Orlando": [col for col in df_voti.columns if "Altro Orlando" in col],
+    "FdI": [col for col in df_voti.columns if "FdI" in col],
+    "PD": [col for col in df_voti.columns if "PD" in col],
+    "M5S": [col for col in df_voti.columns if "M5S" in col],
+    "FI": [col for col in df_voti.columns if "FI" in col],
+    "AVS": [col for col in df_voti.columns if "AVS" in col]
 }
 
 for new_col, patterns in pattern_mapping.items():
@@ -49,9 +56,9 @@ df_merged[df_voti.columns[1:]] = df_merged[df_voti.columns[1:]].apply(pd.to_nume
 # Calcolare la percentuale di voti per lista rispetto agli iscritti totali
 df_merged["TOT_VOTI_VALIDI_LISTA"] = df_merged["TOT_VOTI_VALIDI_LISTA"].replace(0, np.nan).fillna(1)
 
-liste_partiti = [col for col in df_voti.columns if col not in ["SEZIONE", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA"]]
+liste_partiti = [col for col in df_voti.columns if col != "SEZIONE"]
 for lista in liste_partiti:
-    df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["ISCRITTI_TOT"]) * 100
+    df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI_LISTA"]) * 100
 
 # Pulizia dati per evitare errori nella mappa
 df_merged = df_merged.replace([np.inf, -np.inf], 0).fillna(0)
@@ -59,25 +66,11 @@ df_merged = df_merged.replace([np.inf, -np.inf], 0).fillna(0)
 # Creare la mappa centrata su Genova
 mappa = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
 
-# Selezionare la lista da visualizzare
-selected_lista = st.selectbox("Seleziona la lista/partito da visualizzare:", liste_partiti)
-
-choropleth = folium.Choropleth(
-    geo_data=gdf,
-    name="Distribuzione per lista",
-    data=df_merged,
-    columns=["SEZIONE", f"PERC_{selected_lista}"],
-    key_on="feature.properties.SEZIONE",
-    fill_color="Blues",
-    fill_opacity=0.7,
-    line_opacity=0.2,
-    legend_name=f"Percentuale voti per {selected_lista}"
-).add_to(mappa)
-
 # Aggiungere popup con info per ogni sezione
 for _, row in df_merged.iterrows():
     tooltip_text = f"Sezione: {row['SEZIONE']}<br>"
-    tooltip_text += f"{selected_lista}: {row[selected_lista]} voti ({row[f'PERC_{selected_lista}']:.2f}%)"
+    for lista in liste_partiti:
+        tooltip_text += f"{lista}: {row[lista]} voti ({row[f'PERC_{lista}']:.2f}%)<br>"
     
     folium.GeoJson(
         row["geometry"],
@@ -88,6 +81,3 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
-
-
-
