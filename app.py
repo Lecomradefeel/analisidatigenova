@@ -26,7 +26,7 @@ df_voti["SEZIONE"] = df_voti["SEZIONE"].astype(int)
 gdf["SEZIONE"] = gdf["SEZIONE"].astype(int)
 
 # Rimuovere colonne non necessarie
-colonne_da_escludere = ["UNITA_URBANISTICA", "CIRCOSCRIZIONE", "COD_MUNICIPIO", "MUNICIPIO", "ISCRITTI_TOT", "TOT_VOTI_VALIDI_LISTA", "SCH_BIANCHE", "SCH_NULLE", "VOTI_CONTESTATI"]
+colonne_da_escludere = ["UNITA_URBANISTICA", "CIRCOSCRIZIONE", "COD_MUNICIPIO", "MUNICIPIO", "ISCRITTI_TOT", "SCH_BIANCHE", "SCH_NULLE", "VOTI_CONTESTATI"]
 df_voti = df_voti.drop(columns=[col for col in colonne_da_escludere if col in df_voti.columns])
 
 # Accorpare le colonne con nomi simili solo se esistono
@@ -53,12 +53,13 @@ df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
 # Convertire tutte le colonne di voto in numerico
 df_merged[df_voti.columns[1:]] = df_merged[df_voti.columns[1:]].apply(pd.to_numeric, errors="coerce").fillna(0)
 
-# Calcolare la percentuale di voti per lista rispetto agli iscritti totali
-df_merged["TOT_VOTI_VALIDI_LISTA"] = df_merged["TOT_VOTI_VALIDI_LISTA"].replace(0, np.nan).fillna(1)
+# Creare una colonna con il totale effettivo dei voti validi
+df_merged["TOT_VOTI_VALIDI"] = df_merged[liste_partiti].sum(axis=1)
 
+# Calcolare la percentuale di voti per lista rispetto al totale effettivo dei voti validi
 liste_partiti = [col for col in df_voti.columns if col != "SEZIONE"]
 for lista in liste_partiti:
-    df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI_LISTA"]) * 100
+    df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI"]) * 100
 
 # Pulizia dati per evitare errori nella mappa
 df_merged = df_merged.replace([np.inf, -np.inf], 0).fillna(0)
@@ -81,3 +82,4 @@ for _, row in df_merged.iterrows():
 folium_static(mappa)
 
 st.write("Mappa caricata con successo!")
+
