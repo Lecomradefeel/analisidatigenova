@@ -21,12 +21,34 @@ def load_data():
 
 df_voti, df_percentuali, gdf_municipi = load_data()
 
-# Rinominare la colonna nei municipi per uniformarla con df_voti
-gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
+# Stampiamo i nomi delle colonne per verificare il problema
+st.write("Colonne in df_voti:", df_voti.columns.tolist())
+st.write("Colonne in df_percentuali:", df_percentuali.columns.tolist())
+st.write("Colonne in gdf_municipi:", gdf_municipi.columns.tolist())
 
-# Unire i dati dei voti e delle percentuali ai municipi
-gdf_municipi = gdf_municipi.merge(df_voti, on="MUNICIPIO", how="left")
-gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left", suffixes=("_VOTI", "_PERC"))
+# Rinominare la colonna nei municipi per uniformarla con df_voti
+if "NOME_MUNIC" in gdf_municipi.columns:
+    gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
+
+if "NOME_MUNIC" in df_voti.columns:
+    df_voti.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
+
+if "NOME_MUNIC" in df_percentuali.columns:
+    df_percentuali.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
+
+# Controllare se "MUNICIPIO" esiste ora
+if "MUNICIPIO" not in df_voti.columns:
+    st.error("⚠️ Errore: 'MUNICIPIO' non trovato in df_voti!")
+if "MUNICIPIO" not in df_percentuali.columns:
+    st.error("⚠️ Errore: 'MUNICIPIO' non trovato in df_percentuali!")
+if "MUNICIPIO" not in gdf_municipi.columns:
+    st.error("⚠️ Errore: 'MUNICIPIO' non trovato in gdf_municipi!")
+
+# Se le colonne sono presenti, procediamo con il merge
+if "MUNICIPIO" in df_voti.columns and "MUNICIPIO" in gdf_municipi.columns:
+    gdf_municipi = gdf_municipi.merge(df_voti, on="MUNICIPIO", how="left")
+if "MUNICIPIO" in df_percentuali.columns and "MUNICIPIO" in gdf_municipi.columns:
+    gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left", suffixes=("_VOTI", "_PERC"))
 
 # Creazione della sidebar per navigazione
 st.sidebar.title("Seleziona una vista")
