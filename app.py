@@ -1,20 +1,61 @@
 import streamlit as st
+import folium
+import pandas as pd
+import geopandas as gpd
+from streamlit_folium import folium_static
 
-# Titolo della dashboard
-st.title("Dashboard Elettorale Genova")
+# Percorsi dei file
+data_voti = "regionali2024_voti_lista_v2 accorpati.xlsx"
+data_municipi = "Municipi Genova.geojson"
 
-st.write("""
-👋 Benvenuto nella Dashboard Elettorale di Genova!  
-Seleziona una delle seguenti sezioni per accedere alle analisi dettagliate. 🚀
-""")
+# Liste di interesse
+liste_partiti = ["Lega", "FdI", "FI", "AVS", "PD", "M5S", "PCI, PaP, RC", "Altro Bucci", "Altro Orlando", "Altro"]
 
-# Sidebar con i link ai branch
+# Caricamento dati
+@st.cache_data
+def load_data():
+    df_voti = pd.read_excel(data_voti, sheet_name="Somma voti semplificata")
+    df_percentuali = pd.read_excel(data_voti, sheet_name="Percentuali")
+    gdf_municipi = gpd.read_file(data_municipi)
+    return df_voti, df_percentuali, gdf_municipi
+
+df_voti, df_percentuali, gdf_municipi = load_data()
+
+# Rinominare la colonna nei municipi per uniformarla con df_voti
+gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
+
+# Unire i dati dei voti e delle percentuali ai municipi
+gdf_municipi = gdf_municipi.merge(df_voti, on="MUNICIPIO", how="left")
+gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left", suffixes=("_VOTI", "_PERC"))
+
+# Creazione della sidebar per navigazione
 st.sidebar.title("Seleziona una vista")
+sezione = st.sidebar.radio("", ["🏠 Home", "🗺 Mappa Municipi"])
 
-st.sidebar.page_link("mappa-municipi/app.py", label="🗺 Mappa per Municipio")
-st.sidebar.page_link("mappa-sezioni/app.py", label="🗺 Mappa per Sezione")
-st.sidebar.page_link("mappa-traffico/app.py", label="🚶 Mappa Traffico Pedonale")
-st.sidebar.page_link("tabelle-voti/app.py", label="📋 Tabella Voti per Sezione")
-st.sidebar.page_link("grafici-municipi/app.py", label="📊 Grafici Voti per Municipio")
+# Pagina Home
+if sezione == "🏠 Home":
+    st.title("Dashboard Elettorale Genova")
+    st.write("""
+    👋 Benvenuto nella Dashboard Elettorale di Genova!  
+    Seleziona una delle seguenti sezioni dal menu a sinistra per accedere ai dati.
+    """)
 
-st.write("⚠️ Seleziona una sezione dal menu a sinistra per iniziare.")
+# Pagina Mappa Municipi
+elif sezione == "🗺 Mappa Municipi":
+    st.header("Mappa dei voti per Municipio")
+    m = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
+
+    # Aggiungere i tooltip con i voti e le percentuali
+    for _, row in gdf_municipi.iterrows():
+        tooltip_text = f"<b>Municipio: {row['MUNICIPIO']}</b><br>"
+        for lista in liste_partiti:
+            voti_col = f"{lista}_VOTI"
+            perc_col = f"{lista}_PERC"
+            if voti_col in gdf_municipi.columns and perc_col in gdf_municipi.columns:
+                tooltip_text += f"{lista}: {row[voti_col]} voti ({row[perc_col]:.2f}%)<br>"
+        folium.GeoJson(
+            row["geometry"],
+            tooltip=folium.Tooltip(tooltip_text)
+        ).add_to(m)
+
+    folium_static(m)
