@@ -24,11 +24,8 @@ df_voti, gdf_sezioni, gdf_municipi = load_data()
 st.write("Colonne in gdf_municipi:", gdf_municipi.columns.tolist())
 st.write("Colonne in df_voti:", df_voti.columns.tolist())
 
-# Assicurarsi che il nome della colonna sia coerente
-if "municipio" in df_voti.columns:
-    df_voti.rename(columns={"municipio": "MUNICIPIO"}, inplace=True)
-if "municipio" in gdf_municipi.columns:
-    gdf_municipi.rename(columns={"municipio": "MUNICIPIO"}, inplace=True)
+# Rinominare la colonna nei municipi per uniformarla con df_voti
+gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
 
 # Unire i dati delle sezioni ai voti
 gdf_sezioni = gdf_sezioni.merge(df_voti, on="SEZIONE", how="left")
