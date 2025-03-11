@@ -48,11 +48,18 @@ if selected_tab == "Mappa per Municipio":
         data=gdf_municipi,
         columns=["MUNICIPIO", "PROGRESSISTI"],
         key_on="feature.properties.MUNICIPIO",
-        fill_color="Reds",
+        fill_color="YlOrRd",
         fill_opacity=0.7,
         line_opacity=0.2,
         legend_name="Voti AVS + PD + M5S"
     ).add_to(m)
+
+    for _, row in gdf_municipi.iterrows():
+        folium.GeoJson(
+            row["geometry"],
+            tooltip=folium.Tooltip(f"Municipio: {row['MUNICIPIO']}<br>Voti Progressisti: {row['PROGRESSISTI']}")
+        ).add_to(m)
+
     folium_static(m)
 
 # Tab 2: Mappa con i voti progressisti per sezione
@@ -65,11 +72,18 @@ elif selected_tab == "Mappa per Sezione":
         data=gdf_sezioni,
         columns=["SEZIONE", "PROGRESSISTI"],
         key_on="feature.properties.SEZIONE",
-        fill_color="Reds",
+        fill_color="YlOrRd",
         fill_opacity=0.7,
         line_opacity=0.2,
         legend_name="Voti AVS + PD + M5S"
     ).add_to(m)
+
+    for _, row in gdf_sezioni.iterrows():
+        folium.GeoJson(
+            row["geometry"],
+            tooltip=folium.Tooltip(f"Sezione: {row['SEZIONE']}<br>Voti Progressisti: {row['PROGRESSISTI']}")
+        ).add_to(m)
+
     folium_static(m)
 
 # Tab 3: Mappa punti di traffico pedonale (placeholder)
@@ -90,4 +104,5 @@ elif selected_tab == "Grafici Municipi":
     st.plotly_chart(fig)
 
 st.write("Dashboard creata con successo!")
+
 
