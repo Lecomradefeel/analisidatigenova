@@ -23,8 +23,15 @@ def load_data():
 
 df_voti, df_percentuali, gdf_sezioni, gdf_municipi = load_data()
 
+# Stampare i nomi delle colonne per debug
+st.write("Colonne in df_percentuali:", df_percentuali.columns.tolist() if df_percentuali is not None else "df_percentuali non disponibile")
+
 # Rinominare la colonna nei municipi per uniformarla con df_voti
 gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
+
+# Rinominare la colonna in df_percentuali se necessario
+if df_percentuali is not None and "NOME_MUNIC" in df_percentuali.columns:
+    df_percentuali.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
 
 # Sommare i voti per AVS + PD + M5S
 df_voti["PROGRESSISTI"] = df_voti[["AVS - Lista Sansa - Possibile", "PD", "M5S"]].sum(axis=1)
@@ -35,7 +42,7 @@ df_voti_sezioni = df_voti.groupby("SEZIONE").sum().reset_index()
 gdf_municipi = gdf_municipi.merge(df_voti_municipi, on="MUNICIPIO", how="left")
 gdf_sezioni = gdf_sezioni.merge(df_voti_sezioni, on="SEZIONE", how="left")
 
-if df_percentuali is not None:
+if df_percentuali is not None and "MUNICIPIO" in df_percentuali.columns:
     gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left")
 
 # Creazione delle tabs
@@ -106,3 +113,4 @@ elif selected_tab == "Grafici Municipi":
     st.plotly_chart(fig)
 
 st.write("Dashboard creata con successo!")
+
