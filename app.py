@@ -13,9 +13,16 @@ data_municipi = "Municipi Genova.geojson"
 # Caricamento dati
 @st.cache_data
 def load_data():
-    df_voti = pd.read_excel(data_voti, sheet_name=None)
-    df_percentuali = df_voti["percentuali"]
-    df_voti = df_voti["voti"]
+    xls = pd.ExcelFile(data_voti)
+    st.write("Fogli disponibili nell'Excel:", xls.sheet_names)  # Debug: Mostra i fogli disponibili
+    
+    df_voti = pd.read_excel(xls, sheet_name="voti")
+    if "percentuali" in xls.sheet_names:
+        df_percentuali = pd.read_excel(xls, sheet_name="percentuali")
+    else:
+        st.warning("Il foglio 'percentuali' non è stato trovato nel file Excel.")
+        df_percentuali = None
+    
     gdf_sezioni = gpd.read_file(data_sezioni)
     gdf_municipi = gpd.read_file(data_municipi)
     return df_voti, df_percentuali, gdf_sezioni, gdf_municipi
@@ -33,7 +40,9 @@ df_voti_sezioni = df_voti.groupby("SEZIONE").sum().reset_index()
 
 gdf_municipi = gdf_municipi.merge(df_voti_municipi, on="MUNICIPIO", how="left")
 gdf_sezioni = gdf_sezioni.merge(df_voti_sezioni, on="SEZIONE", how="left")
-gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left")
+
+if df_percentuali is not None:
+    gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left")
 
 # Creazione delle tabs
 st.sidebar.title("Dashboard Elettorale Genova")
@@ -56,14 +65,15 @@ if selected_tab == "Mappa per Municipio":
         legend_name="Voti AVS + PD + M5S"
     ).add_to(m)
 
-    for _, row in gdf_municipi.iterrows():
-        tooltip_text = f"Municipio: {row['MUNICIPIO']}<br>"
-        for col in df_percentuali.columns[1:]:
-            tooltip_text += f"{col}: {row[col]:.2f}%<br>"
-        folium.GeoJson(
-            row["geometry"],
-            tooltip=folium.Tooltip(tooltip_text)
-        ).add_to(m)
+    if df_percentuali is not None:
+        for _, row in gdf_municipi.iterrows():
+            tooltip_text = f"Municipio: {row['MUNICIPIO']}<br>"
+            for col in df_percentuali.columns[1:]:
+                tooltip_text += f"{col}: {row[col]:.2f}%<br>"
+            folium.GeoJson(
+                row["geometry"],
+                tooltip=folium.Tooltip(tooltip_text)
+            ).add_to(m)
     
     folium_static(m)
 
