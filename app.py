@@ -13,16 +13,10 @@ data_municipi = "Municipi Genova.geojson"
 # Caricamento dati
 @st.cache_data
 def load_data():
-    xls = pd.ExcelFile(data_voti)
-    st.write("Fogli disponibili nell'Excel:", xls.sheet_names)  # Debug: Mostra i fogli disponibili
-    
-    df_voti = pd.read_excel(xls, sheet_name="voti")
-    if "percentuali" in xls.sheet_names:
-        df_percentuali = pd.read_excel(xls, sheet_name="percentuali")
-    else:
-        st.warning("Il foglio 'percentuali' non è stato trovato nel file Excel.")
-        df_percentuali = None
-    
+    sheets = pd.ExcelFile(data_voti).sheet_names
+    st.write("Fogli trovati nel file Excel:", sheets)
+    df_voti = pd.read_excel(data_voti, sheet_name="Worksheet")
+    df_percentuali = pd.read_excel(data_voti, sheet_name="Percentuali") if "Percentuali" in sheets else None
     gdf_sezioni = gpd.read_file(data_sezioni)
     gdf_municipi = gpd.read_file(data_municipi)
     return df_voti, df_percentuali, gdf_sezioni, gdf_municipi
@@ -112,6 +106,3 @@ elif selected_tab == "Grafici Municipi":
     st.plotly_chart(fig)
 
 st.write("Dashboard creata con successo!")
-
-
-
