@@ -20,6 +20,16 @@ def load_data():
 
 df_voti, gdf_sezioni, gdf_municipi = load_data()
 
+# Verificare i nomi delle colonne
+st.write("Colonne in gdf_municipi:", gdf_municipi.columns.tolist())
+st.write("Colonne in df_voti:", df_voti.columns.tolist())
+
+# Assicurarsi che il nome della colonna sia coerente
+if "municipio" in df_voti.columns:
+    df_voti.rename(columns={"municipio": "MUNICIPIO"}, inplace=True)
+if "municipio" in gdf_municipi.columns:
+    gdf_municipi.rename(columns={"municipio": "MUNICIPIO"}, inplace=True)
+
 # Unire i dati delle sezioni ai voti
 gdf_sezioni = gdf_sezioni.merge(df_voti, on="SEZIONE", how="left")
 
@@ -83,4 +93,3 @@ elif selected_tab == "Grafici Municipi":
     st.plotly_chart(fig)
 
 st.write("Dashboard creata con successo!")
-
