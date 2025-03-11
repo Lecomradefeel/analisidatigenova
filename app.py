@@ -13,12 +13,14 @@ data_municipi = "Municipi Genova.geojson"
 # Caricamento dati
 @st.cache_data
 def load_data():
-    df_voti = pd.read_excel(data_voti)
+    df_voti = pd.read_excel(data_voti, sheet_name=None)
+    df_percentuali = df_voti["percentuali"]
+    df_voti = df_voti["voti"]
     gdf_sezioni = gpd.read_file(data_sezioni)
     gdf_municipi = gpd.read_file(data_municipi)
-    return df_voti, gdf_sezioni, gdf_municipi
+    return df_voti, df_percentuali, gdf_sezioni, gdf_municipi
 
-df_voti, gdf_sezioni, gdf_municipi = load_data()
+df_voti, df_percentuali, gdf_sezioni, gdf_municipi = load_data()
 
 # Rinominare la colonna nei municipi per uniformarla con df_voti
 gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
@@ -26,23 +28,23 @@ gdf_municipi.rename(columns={"NOME_MUNIC": "MUNICIPIO"}, inplace=True)
 # Sommare i voti per AVS + PD + M5S
 df_voti["PROGRESSISTI"] = df_voti[["AVS - Lista Sansa - Possibile", "PD", "M5S"]].sum(axis=1)
 
-df_voti_municipi = df_voti.groupby("MUNICIPIO")["PROGRESSISTI"].sum().reset_index()
-df_voti_sezioni = df_voti.groupby("SEZIONE")["PROGRESSISTI"].sum().reset_index()
+df_voti_municipi = df_voti.groupby("MUNICIPIO").sum().reset_index()
+df_voti_sezioni = df_voti.groupby("SEZIONE").sum().reset_index()
 
-# Unire i dati alle mappe
 gdf_municipi = gdf_municipi.merge(df_voti_municipi, on="MUNICIPIO", how="left")
 gdf_sezioni = gdf_sezioni.merge(df_voti_sezioni, on="SEZIONE", how="left")
+gdf_municipi = gdf_municipi.merge(df_percentuali, on="MUNICIPIO", how="left")
 
 # Creazione delle tabs
 st.sidebar.title("Dashboard Elettorale Genova")
 tabs = ["Mappa per Municipio", "Mappa per Sezione", "Mappa Traffico Pedonale", "Tabella Voti", "Grafici Municipi"]
 selected_tab = st.sidebar.radio("Seleziona una vista", tabs)
 
-# Tab 1: Mappa con i voti progressisti per municipio
+# Tab 1: Mappa con i voti per municipio
 if selected_tab == "Mappa per Municipio":
-    st.header("Mappa dei voti progressisti per Municipio")
+    st.header("Mappa dei voti per Municipio")
     m = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
-    folium.Choropleth(
+    choropleth = folium.Choropleth(
         geo_data=gdf_municipi,
         name="Municipi",
         data=gdf_municipi,
@@ -55,16 +57,19 @@ if selected_tab == "Mappa per Municipio":
     ).add_to(m)
 
     for _, row in gdf_municipi.iterrows():
+        tooltip_text = f"Municipio: {row['MUNICIPIO']}<br>"
+        for col in df_percentuali.columns[1:]:
+            tooltip_text += f"{col}: {row[col]:.2f}%<br>"
         folium.GeoJson(
             row["geometry"],
-            tooltip=folium.Tooltip(f"Municipio: {row['MUNICIPIO']}<br>Voti Progressisti: {row['PROGRESSISTI']}")
+            tooltip=folium.Tooltip(tooltip_text)
         ).add_to(m)
-
+    
     folium_static(m)
 
-# Tab 2: Mappa con i voti progressisti per sezione
+# Tab 2: Mappa con i voti per sezione
 elif selected_tab == "Mappa per Sezione":
-    st.header("Mappa dei voti progressisti per Sezione")
+    st.header("Mappa dei voti per Sezione")
     m = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
     folium.Choropleth(
         geo_data=gdf_sezioni,
@@ -77,13 +82,6 @@ elif selected_tab == "Mappa per Sezione":
         line_opacity=0.2,
         legend_name="Voti AVS + PD + M5S"
     ).add_to(m)
-
-    for _, row in gdf_sezioni.iterrows():
-        folium.GeoJson(
-            row["geometry"],
-            tooltip=folium.Tooltip(f"Sezione: {row['SEZIONE']}<br>Voti Progressisti: {row['PROGRESSISTI']}")
-        ).add_to(m)
-
     folium_static(m)
 
 # Tab 3: Mappa punti di traffico pedonale (placeholder)
@@ -99,10 +97,11 @@ elif selected_tab == "Tabella Voti":
 # Tab 5: Grafici per municipi
 elif selected_tab == "Grafici Municipi":
     st.header("Distribuzione dei voti per lista nei Municipi")
-    df_voti_long = df_voti.melt(id_vars=["MUNICIPIO"], value_vars=["AVS - Lista Sansa - Possibile", "PD", "M5S"], var_name="Lista", value_name="Voti")
-    fig = px.bar(df_voti_long, x="MUNICIPIO", y="Voti", color="Lista", title="Voti per lista nei Municipi", barmode="stack")
+    df_voti_long = df_voti.melt(id_vars=["MUNICIPIO"], value_vars=df_voti.columns[10:], var_name="Lista", value_name="Voti")
+    fig = px.bar(df_voti_long, x="MUNICIPIO", y="Voti", color="Lista", title="Voti per lista nei Municipi", barmode="group")
     st.plotly_chart(fig)
 
 st.write("Dashboard creata con successo!")
+
 
 
