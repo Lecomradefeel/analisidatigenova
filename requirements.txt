@@ -1,8 +1,6 @@
 streamlit
-geopandas
 folium
-shapely
 pandas
-matplotlib
+geopandas
+plotly
 openpyxl
-streamlit-folium
