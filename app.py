@@ -1,86 +1,86 @@
+import streamlit as st
 import folium
 import pandas as pd
 import geopandas as gpd
-import streamlit as st
-import numpy as np
 from streamlit_folium import folium_static
+import plotly.express as px
 
-# Titolo della pagina Streamlit
-st.title("Mappa della Distribuzione dei Voti per Lista")
+# Percorsi dei file
+data_voti = "regionali2024_voti_lista_v2 accorpati.xlsx"
+data_sezioni = "precincts_genova_original.geojson"
+data_municipi = "Municipi Genova.geojson"
 
-# Percorso del file Shapefile (se disponibile)
-shapefile_path = "precincts_genova_original.shp"
+# Caricamento dati
+@st.cache_data
+def load_data():
+    df_voti = pd.read_excel(data_voti)
+    gdf_sezioni = gpd.read_file(data_sezioni)
+    gdf_municipi = gpd.read_file(data_municipi)
+    return df_voti, gdf_sezioni, gdf_municipi
 
-# Caricare il file SHP con gestione avanzata della geometria
-gdf = gpd.read_file(shapefile_path)
-gdf["geometry"] = gdf["geometry"].apply(lambda geom: geom.buffer(0) if not geom.is_valid else geom)
+df_voti, gdf_sezioni, gdf_municipi = load_data()
 
-# Percorso del file Excel
-excel_path = "regionali2024_voti_lista_v2 accorpati.xlsx"
+# Unire i dati delle sezioni ai voti
+gdf_sezioni = gdf_sezioni.merge(df_voti, on="SEZIONE", how="left")
 
-# Caricare i dati di voto
-df_voti = pd.read_excel(excel_path, sheet_name="Worksheet")
+# Unire i dati dei municipi ai voti aggregati
+df_voti_municipi = df_voti.groupby("MUNICIPIO").sum().reset_index()
+gdf_municipi = gdf_municipi.merge(df_voti_municipi, on="MUNICIPIO", how="left")
 
-# Convertire SEZIONE in intero per garantire la compatibilità
-df_voti["SEZIONE"] = df_voti["SEZIONE"].astype(int)
-gdf["SEZIONE"] = gdf["SEZIONE"].astype(int)
+# Creazione delle tabs
+st.sidebar.title("Dashboard Elettorale Genova")
+tabs = ["Mappa per Municipio", "Mappa per Sezione", "Mappa Traffico Pedonale", "Tabella Voti", "Grafici Municipi"]
+selected_tab = st.sidebar.radio("Seleziona una vista", tabs)
 
-# Rimuovere colonne non necessarie
-colonne_da_escludere = ["UNITA_URBANISTICA", "CIRCOSCRIZIONE", "COD_MUNICIPIO", "MUNICIPIO", "ISCRITTI_TOT", "SCH_BIANCHE", "SCH_NULLE", "VOTI_CONTESTATI"]
-df_voti = df_voti.drop(columns=[col for col in colonne_da_escludere if col in df_voti.columns])
+# Tab 1: Mappa con i voti per municipio
+if selected_tab == "Mappa per Municipio":
+    st.header("Mappa dei voti per Municipio")
+    m = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
+    folium.Choropleth(
+        geo_data=gdf_municipi,
+        name="Municipi",
+        data=gdf_municipi,
+        columns=["MUNICIPIO", "TOT_VOTI_VALIDI_LISTA"],
+        key_on="feature.properties.MUNICIPIO",
+        fill_color="YlOrRd",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name="Voti per Municipio"
+    ).add_to(m)
+    folium_static(m)
 
-# Accorpare le colonne con nomi simili solo se esistono
-pattern_mapping = {
-    "Altro": [col for col in df_voti.columns if "Altro" in col and "Bucci" not in col and "Orlando" not in col],
-    "Altro Bucci": [col for col in df_voti.columns if "Altro Bucci" in col],
-    "Altro Orlando": [col for col in df_voti.columns if "Altro Orlando" in col],
-    "FdI": [col for col in df_voti.columns if "FdI" in col],
-    "PD": [col for col in df_voti.columns if "PD" in col],
-    "M5S": [col for col in df_voti.columns if "M5S" in col],
-    "FI": [col for col in df_voti.columns if "FI" in col],
-    "AVS": [col for col in df_voti.columns if "AVS" in col]
-}
+# Tab 2: Mappa con i voti per sezione
+elif selected_tab == "Mappa per Sezione":
+    st.header("Mappa dei voti per Sezione")
+    m = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
+    folium.Choropleth(
+        geo_data=gdf_sezioni,
+        name="Sezioni",
+        data=gdf_sezioni,
+        columns=["SEZIONE", "TOT_VOTI_VALIDI_LISTA"],
+        key_on="feature.properties.SEZIONE",
+        fill_color="BuPu",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        legend_name="Voti per Sezione"
+    ).add_to(m)
+    folium_static(m)
 
-for new_col, patterns in pattern_mapping.items():
-    existing_columns = [col for col in patterns if col in df_voti.columns]
-    if existing_columns:
-        df_voti[new_col] = df_voti[existing_columns].sum(axis=1, min_count=1)
-        df_voti.drop(columns=existing_columns, inplace=True)
+# Tab 3: Mappa punti di traffico pedonale (placeholder)
+elif selected_tab == "Mappa Traffico Pedonale":
+    st.header("Mappa dei punti di traffico pedonale")
+    st.write("Dati da definire. Possiamo usare OpenStreetMap o fonti regionali.")
 
-# Definire liste_partiti prima dell'unione
-liste_partiti = [col for col in df_voti.columns if col != "SEZIONE"]
+# Tab 4: Tabella con i voti per sezione
+elif selected_tab == "Tabella Voti":
+    st.header("Tabella Voti per Sezione")
+    st.dataframe(df_voti)
 
-# Unire i dati geografici con i dati di voto
-df_merged = gdf.merge(df_voti, on="SEZIONE", how="left")
+# Tab 5: Grafici per municipi
+elif selected_tab == "Grafici Municipi":
+    st.header("Grafico dei voti per Municipio")
+    fig = px.bar(df_voti_municipi, x="MUNICIPIO", y="TOT_VOTI_VALIDI_LISTA", title="Voti per Municipio")
+    st.plotly_chart(fig)
 
-# Convertire tutte le colonne di voto in numerico
-df_merged[liste_partiti] = df_merged[liste_partiti].apply(pd.to_numeric, errors="coerce").fillna(0)
+st.write("Dashboard creata con successo!")
 
-# Creare una colonna con il totale effettivo dei voti validi
-df_merged["TOT_VOTI_VALIDI"] = df_merged[liste_partiti].sum(axis=1)
-
-# Calcolare la percentuale di voti per lista rispetto al totale effettivo dei voti validi
-for lista in liste_partiti:
-    df_merged[f"PERC_{lista}"] = (df_merged[lista] / df_merged["TOT_VOTI_VALIDI"]) * 100
-
-# Pulizia dati per evitare errori nella mappa
-df_merged = df_merged.replace([np.inf, -np.inf], 0).fillna(0)
-
-# Creare la mappa centrata su Genova
-mappa = folium.Map(location=[44.4056, 8.9463], zoom_start=12)
-
-# Aggiungere popup con info per ogni sezione
-for _, row in df_merged.iterrows():
-    tooltip_text = f"Sezione: {row['SEZIONE']}<br>"
-    for lista in liste_partiti:
-        tooltip_text += f"{lista}: {row[lista]} voti ({row[f'PERC_{lista}']:.2f}%)<br>"
-    
-    folium.GeoJson(
-        row["geometry"],
-        tooltip=folium.Tooltip(tooltip_text),
-    ).add_to(mappa)
-
-# Mostrare la mappa in Streamlit
-folium_static(mappa)
-
-st.write("Mappa caricata con successo!")
