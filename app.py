@@ -6,7 +6,7 @@ from streamlit_folium import folium_static
 
 # Percorsi dei file
 data_voti = "regionali2024_voti_lista_v2 accorpati.xlsx"
-data_municipi = "Municipi Genova.geojson"
+data_municipi = "Modified_Municipi_Genova.geojson"
 
 # Liste di interesse
 liste_partiti = ["Lega", "FdI", "FI", "AVS", "PD", "M5S", "PCI, PaP, RC", "Altro Bucci", "Altro Orlando", "Altro"]
@@ -53,7 +53,7 @@ elif sezione == "🗺 Mappa Municipi":
         for lista in liste_partiti:
             voti_col = f"{lista}_VOTI"
             perc_col = f"{lista}_PERC"
-            if voti_col in gdf_municipi.columns and perc_col in gdf_municipi.columns:
+            if voti_col in gdf_municipi.columns and perc_col in gdf_municipi.columns and not pd.isna(row[voti_col]) and not pd.isna(row[perc_col]):
                 tooltip_text += f"{lista}: {row[voti_col]} voti ({row[perc_col]:.2f}%)<br>"
         folium.GeoJson(
             row["geometry"],
