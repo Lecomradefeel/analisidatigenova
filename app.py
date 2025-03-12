@@ -42,7 +42,7 @@ if option == "Mappa voti per Municipio":
         municipio = feature["properties"]["name"]
         municipio_data = df_municipi[df_municipi["Municipio"] == municipio]
         voti_totali = municipio_data["Totale votanti"].sum()
-        tooltip = f"Municipio: {municipio}<br>Voti Totali: {voti_totali}"<br>
+        tooltip = f"Municipio: {municipio}<br>Voti Totali: {voti_totali}"
         for col in municipio_data.columns[2:]:
             tooltip += f"{col}: {municipio_data[col].values[0]} voti ({df_percentuali[df_percentuali['Municipio'] == municipio][col].values[0]}%)<br>"
         folium.GeoJson(feature, tooltip=tooltip, style_function=lambda x: {"fillColor": "blue", "color": "white", "weight": 1, "fillOpacity": 0.5}).add_to(m)
@@ -57,7 +57,7 @@ elif option == "Mappa voti per Sezione":
     for feature in sezioni_geojson["features"]:
         sezione = feature["properties"]["sezione"]
         voti_totali = df_voti[df_voti["SEZIONE"] == sezione]["Totale votanti"].sum()
-        tooltip = f"Sezione: {sezione}<br>Voti Totali: {voti_totali}"<br>
+        tooltip = f"Sezione: {sezione}<br>Voti Totali: {voti_totali}"
         for col in df_voti.columns[3:]:
             tooltip += f"{col}: {df_voti[df_voti['SEZIONE'] == sezione][col].sum()} voti<br>"
         folium.GeoJson(feature, tooltip=tooltip, style_function=lambda x: {"fillColor": "green", "color": "white", "weight": 1, "fillOpacity": 0.5}).add_to(m)
